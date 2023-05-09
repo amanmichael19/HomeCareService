@@ -3,22 +3,47 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: AWS SAM template configuring lambdas for business
 Parameters:
-  Stage: {Type: String, Default: 'alpha'}
+  Stage: {Type: String, Default: 'prod'}
   Region: {Type: String, Default: 'us-west-2'}
-  UseBatsKeyParam: {Type: String, Default: 'false', AllowedValues:['true','false']}
-  DeploymentBucketImportName: {Type: String,  Default: "DeploymentBucket"}
-Conditions:
-  UseBatsKey:
-    'Fn::Equals':
-      - {Ref: UseBatsKeyParam}
-      - 'true'
-
 Resources:
+  PatientProfileTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: PatientProfile
+      AttributeDefinitions:
+        - 
+          AttributeName: PatientId
+          AttributeType: S
+        - 
+          AttributeName: CareFacilityId
+          AttributeType: S
+      KeySchema:
+        - 
+          AttributeName: PatientId
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 10
+        WriteCapacityUnits: 10
+      GlobalSecondaryIndexes:
+        -
+          IndexName: CareFacilityId-PatientId-Index
+          KeySchema:
+            -
+              AttributeName: CareFacilityId
+              KeyType: HASH
+            -
+              AttributeName: PatientId
+              KeyType: RANGE
+          Projection:
+            ProjectionType: "ALL"
+          ProvisionedThroughput:
+            ReadCapacityUnits: 10
+            WriteCapacityUnits: 10
   HomeCareServiceAPIGateway:
     Type: AWS::Serverless::Api
     Properties:
       OpenApiVersion: '2.0'
-      StageName: Prod
+      StageName: !Ref Stage
       Name: "HomeCareServiceAPIGateway"
 
   # Lambda functions
@@ -28,44 +53,44 @@ Resources:
       FunctionName: "HomeCareServiceLambda"
       Handler: 'com.business.homecareservice.HomeCareServiceHandler::handleRequest'
       Runtime: java11
-      CodeUri: 
+      CodeUri: "/Users/tesfami1/Desktop/BusinessProjects/HomeCareService"
         
       Description: lambda to serve as CRUD API for home care service
       Timeout: 300
       MemorySize: 1024
       Environment:
         Variables:
-          Stage: {Ref: Stage}
-          Region: {Ref: Region}
+          Stage: !Ref Stage
+          Region: !Ref Region
       Role:
         Fn::GetAtt:
           - HomeCareServiceLambdaExecutionRole
           - Arn
       Events:
-        getRoot:
+        GetPatientProfile:
           Type: Api
           Properties:
-            Path: /
+            Path: /getpatientprofile
             Method: get
             RestApiId: !Ref HomeCareServiceAPIGateway
-        postRoot:
+        CreatePatientProfile:
           Type: Api
           Properties:
-            Path: /
+            Path: /createpatientprofile
             Method: post
             RestApiId: !Ref HomeCareServiceAPIGateway
-        getProxy:
-          Type: Api
-          Properties:
-            Path: '/{proxy+}'
-            Method: get
-            RestApiId: !Ref HomeCareServiceAPIGateway
-        postProxy:
-          Type: Api
-          Properties:
-            Path: '/{proxy+}'
-            Method: post
-            RestApiId: !Ref HomeCareServiceAPIGateway
+        # getProxy:
+        #   Type: Api
+        #   Properties:
+        #     Path: '/{proxy+}'
+        #     Method: get
+        #     RestApiId: !Ref HomeCareServiceAPIGateway
+        # postProxy:
+        #   Type: Api
+        #   Properties:
+        #     Path: '/{proxy+}'
+        #     Method: post
+        #     RestApiId: !Ref HomeCareServiceAPIGateway
         
   HomeCareServiceLambdaLogGroup:
     Type: AWS::Logs::LogGroup

@@ -1,4 +1,4 @@
-package com.business.homecareservice.servicelayer.models;
+package com.business.homecareservice.servicelayer.models.request;
 
 import java.io.IOException;
 
@@ -16,12 +16,14 @@ import lombok.Value;
 @EqualsAndHashCode(callSuper=false)
 @Builder(toBuilder = true)
 @JsonDeserialize(builder = GetPatientProfileRequest.GetPatientProfileRequestBuilder.class)
-public class GetPatientProfileRequest extends AbstractRequest {
+public class GetPatientProfileRequest implements ISerializableRequest {
 
     @NonNull
     private String patientId;
 
-    @JsonPOJOBuilder(withPrefix = "with")
+    // need to specify withPrefix="" because lombok's @Builder creates methods with no prefix and jackson deserializer
+    // needs to use those correct methods to create the object
+    @JsonPOJOBuilder(withPrefix = "")
     public static final class GetPatientProfileRequestBuilder { }
 
     @Override

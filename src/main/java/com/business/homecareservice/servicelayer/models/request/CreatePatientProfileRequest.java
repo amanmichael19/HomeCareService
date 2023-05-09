@@ -1,8 +1,8 @@
-package com.business.homecareservice.servicelayer.models;
+package com.business.homecareservice.servicelayer.models.request;
 
 import java.io.IOException;
-import java.time.Instant;
 
+import com.business.homecareservice.servicelayer.models.PatientProfile;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
@@ -18,23 +18,13 @@ import lombok.Value;
 @Value
 @EqualsAndHashCode(callSuper = false)
 @JsonDeserialize(builder = CreatePatientProfileRequest.CreatePatientProfileRequestBuilder.class)
-public class CreatePatientProfileRequest extends AbstractRequest {
+public class CreatePatientProfileRequest implements ISerializableRequest {
     @NonNull
-    private String careFacilityId;
+    private PatientProfile patientProfile;
 
-    @NonNull
-    private String patientId;
-
-    @NonNull
-    private String firstName;
-
-    @NonNull
-    private String lastName;
-
-    @NonNull
-    private Instant birthDate;
-
-    @JsonPOJOBuilder(withPrefix = "with")
+    // need to specify withPrefix="" because lombok's @Builder creates methods with no prefix and jackson deserializer
+    // needs to use those correct methods to create the object
+    @JsonPOJOBuilder(withPrefix = "")
     public static final class CreatePatientProfileRequestBuilder { }
 
     @Override
