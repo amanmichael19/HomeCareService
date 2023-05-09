@@ -1,0 +1,10 @@
+version = 0.1
+[default.deploy.parameters]
+stack_name = "HomeCareService"
+resolve_s3 = true
+s3_prefix = "HomeCareService"
+region = "us-west-2"
+confirm_changeset = true
+capabilities = "CAPABILITY_NAMED_IAM"
+parameter_overrides = "Stage=\"prod\" Region=\"us-west-2\""
+image_repositories = []
