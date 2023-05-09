@@ -1,0 +1,117 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: AWS SAM template configuring lambdas for business
+Parameters:
+  Stage: {Type: String, Default: 'alpha'}
+  Region: {Type: String, Default: 'us-west-2'}
+  UseBatsKeyParam: {Type: String, Default: 'false', AllowedValues:['true','false']}
+  DeploymentBucketImportName: {Type: String,  Default: "DeploymentBucket"}
+Conditions:
+  UseBatsKey:
+    'Fn::Equals':
+      - {Ref: UseBatsKeyParam}
+      - 'true'
+
+Resources:
+  HomeCareServiceAPIGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      OpenApiVersion: '2.0'
+      StageName: Prod
+      Name: "HomeCareServiceAPIGateway"
+
+  # Lambda functions
+  HomeCareServiceLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: "HomeCareServiceLambda"
+      Handler: 'com.business.homecareservice.HomeCareServiceHandler::handleRequest'
+      Runtime: java11
+      CodeUri: 
+        
+      Description: lambda to serve as CRUD API for home care service
+      Timeout: 300
+      MemorySize: 1024
+      Environment:
+        Variables:
+          Stage: {Ref: Stage}
+          Region: {Ref: Region}
+      Role:
+        Fn::GetAtt:
+          - HomeCareServiceLambdaExecutionRole
+          - Arn
+      Events:
+        getRoot:
+          Type: Api
+          Properties:
+            Path: /
+            Method: get
+            RestApiId: !Ref HomeCareServiceAPIGateway
+        postRoot:
+          Type: Api
+          Properties:
+            Path: /
+            Method: post
+            RestApiId: !Ref HomeCareServiceAPIGateway
+        getProxy:
+          Type: Api
+          Properties:
+            Path: '/{proxy+}'
+            Method: get
+            RestApiId: !Ref HomeCareServiceAPIGateway
+        postProxy:
+          Type: Api
+          Properties:
+            Path: '/{proxy+}'
+            Method: post
+            RestApiId: !Ref HomeCareServiceAPIGateway
+        
+  HomeCareServiceLambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName:
+        Fn::Sub:
+          - "/aws/lambda/${LambdaName}"
+          - {LambdaName: {Ref: HomeCareServiceLambda} }
+      RetentionInDays: 30
+  
+  HomeCareServiceLambdaExecutionRole:
+    # TODO: Add your role to AAA application: https://aaa.amazon.com/applications/amzn1.aaa.app.cys2eqaafcl4gt4ikg5q/edit_aws_identities
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: "HomeCareServiceLambdaExecutionRole"
+      Policies:
+        - PolicyName: "HomeCareServiceLambdaExecutionPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "dynamodb:Describe*"
+                  - "dynamodb:*Item"
+                  - "dynamodb:Scan"
+                  - "dynamodb:Query"
+                  - "logs:*"
+                  - "cloudwatch:PutMetricData"
+                  - "cloudwatch:GetMetricStatistics"
+                  - "events:*"
+                  - "xray:*"
+                  - "sqs:*"
+                  - "sts:AssumeRole"
+                Resource: "*"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+
+Outputs:
+  StackArn:
+    Value:
+      Ref: AWS::StackId
+    Description: Use this as the stack_arn in your cloud_formation_deployment_stack override.
